@@ -63,20 +63,20 @@
 				<!-- COMPARISON TAB -->
 				<div class="col-xs-3" id="situation" ng-show="view.isActive('comparison')">
 					<h3>Situation Details</h3>
-					<form ng-submit="input.situation.submit()" ng-show="input.situation.show()">
+					<form ng-submit="input.situation.submit()">
 						<div class="form-group" ng-repeat="detail in input.situation.details">
 							<label for="{{ 'situation-' + detail }}" ng-bind="format.textualize(detail)"></label>
 							<select class="form-control" id="{{ 'situation-' + detail }}" ng-model="input.situation.values[detail]">
-								<option ng-repeat="option in input.situation.options[detail]" value="{{ option.value }}" ng-bind="option.text"></option>
+								<option ng-repeat="option in input.situation.options[detail]" value="{{ option.value }}" ng-bind="option.text" ng-disabled="input.situation.disabled()"></option>
 							</select>
 						</div>
-						<button class="btn btn-primary btn-block" role="submit">Submit</button>
+						<button class="btn btn-primary btn-block" role="submit" ng-disabled="input.situation.disabled()">Submit</button>
 					</form>
 				</div><!-- #situation -->
 
 				<div class="col-xs-6" id="results" ng-show="view.isActive('comparison')">
 					<h3>Results Table</h3>
-					<table class="table" ng-show="table.show()">
+					<table class="table">
 						<caption ng-bind="table.caption()"></caption>
 						<thead>
 							<tr>
@@ -96,10 +96,30 @@
 
 				<!-- TREE TAB -->
 				<div class="col-xs-3" ng-show="view.isActive('tree')">
-					select
+					<h3>Branches and Order</h3>
+					<form>
+						<div class="form-group">
+							<button class="btn btn-warning btn-block" role="submit" ng-click="tree.draw()" ng-disabled="tree.disabled('draw')" ng-bind="'Draw the Tree (' + tree.selected.length + ' Levels)'">Draw the Tree</button>
+						</div>
+						<div class="form-group" ng-repeat="detail in tree.details">
+							<div ng-show="tree.submitted(detail)">
+								<span>
+									<b ng-bind="format.textualize(detail) + ': '"></b>
+									<span ng-bind="tree.getSelections(detail)"></span>
+								</span>
+								<p>
+									<button class="btn btn-default" ng-click="tree.shiftUp(detail)">Shift Up</button>
+									<button class="btn btn-default" ng-click="tree.shiftDown(detail)">Shift Down</button>
+								</p>
+								<button class="btn btn-success" ng-bind="'Edit ' + format.textualize(detail)" ng-click="tree.edit(detail)"></button>
+								<button class="btn btn-danger" ng-bind="'Remove ' + format.textualize(detail)" ng-click="tree.remove(detail)"></button>
+							</div>
+							<button class="btn btn-primary btn-block" ng-show="!tree.submitted(detail)" ng-bind="'Add ' + format.textualize(detail)" ng-click="tree.add(detail)" ng-disabled="tree.disabled(detail)"></button>
+						</div>
+					</form>
 				</div>
-				<div class="col-xs-6" ng-show="view.isActive('tree')">
-					tree
+				<div class="col-xs-6" ng-show="view.isActive('tree')" id="tree">
+					<h3>Tree Graphic</h3>
 				</div>
 				<!-- END TREE TAB-->
 
@@ -107,9 +127,9 @@
 		</div><!-- .container -->
 
 		<!-- library scripts -->
-		<script src="./js/libraries/ui-bootstrap-tpls-0.14.3.min.js"></script>
 		<script src="./js/libraries/d3.v3.min.js"></script>
 		<script src="./js/libraries/angular.min.js"></script>
+		<script src="./js/libraries/ui-bootstrap-tpls-0.14.3.min.js"></script>
 
 		<!-- scripts -->
 		<script src="./data/2015-WS-data.js"></script>

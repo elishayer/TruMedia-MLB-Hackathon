@@ -5,10 +5,13 @@
  * Declares an Angular module and controller
  */
 
-angular.module('tmhApp', []).controller('tmhController', function($scope) {
+// the details with which pitchers can be separated
+var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand' ];
+
+angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
 	// tabs and the current view, initialized to comparison
 	$scope.view = {
-		tabs: [ 'comparison', 'search', 'tree' ],
+		tabs: [ 'comparison', 'tree' ],
 		curr: 'comparison',
 		setActive: function(tab) {
 			this.curr = tab;
@@ -22,7 +25,8 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 	$scope.input = {
 		// the select input groups
 		selects: {
-			/* input groups each have the following data:
+			/* the select input groups are shared between all taps,
+			 * and each group has the following data:
 			 * title: the title of the input group
 			 * type: the type of data submitted in the input group
 			 * value: the initialized value of the select, used with ng-model
@@ -38,7 +42,10 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 				type: 'team',
 				value: '0',
 				options: function() { return Object.keys(teams); },
-				submit: function() { $scope.input.submitted.team = this.value; },
+				submit: function() {
+					$scope.input.submitted.team = this.value;
+					$scope.message = 'Now please select a pitcher below.';
+				},
 				showForm: function() { return !$scope.input.submitted.team; },
 				result: function() { return 'Team: ' + $scope.input.submitted.team; },
 				showEdit: function() { return $scope.input.submitted.team; },
@@ -52,6 +59,7 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 						situation: 0
 					};
 					$scope.input.situation.initialize();
+					$scope.tree.isDrawn = false;
 				}
 			},
 			pitcher: {
@@ -93,6 +101,9 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 					// set the distribution and number of pitches to the pitcher data
 					$scope.input.submitted.pitcher.num = numPitches;
 					$scope.input.submitted.pitcher.distribution = distribution;
+
+					// set the message
+					$scope.message = 'Great, now select details about the situation.';
 				},
 				showForm: function() {
 					return $scope.input.submitted.team &&
@@ -108,18 +119,18 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 					$scope.input.submitted.pitcher = 0;
 					$scope.input.submitted.situation = 0;
 					$scope.input.situation.initialize();
+					$scope.tree.isDrawn = false;
 				}
 			}
 		},
 		// the details for the situation of which pitches to consider
 		situation: {
-			// an array of the details that can be given, and an object with the values
-			details: [ 'inning', 'count', 'bases', 'out', 'batter-hand' ],
+			details: details,
 			values: {},
 			// options for the details
 			options: options,
-			// function for whether the situation form should be displayed
-			show: function() { return $scope.input.submitted.pitcher; },
+			// function for whether the situation form should be disabled
+			disabled: function() { return !$scope.input.submitted.pitcher; },
 			// function to submit the situation request
 			submit: function() {
 				// initialize the submitted situation to be an empty object
@@ -177,12 +188,12 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 
 	// data and methods for the results table
 	$scope.table = {
-		// predicate method for whether to show the table
-		show: function() { return $scope.input.submitted.pitcher; },
 		// generate the caption for the table
 		caption: function() {
-			return $scope.input.submitted.pitcher.name + ' of ' + 
-				$scope.input.submitted.team;
+			if ($scope.input.submitted.pitcher) {
+				return $scope.input.submitted.pitcher.name + ' of ' + 
+					$scope.input.submitted.team;
+			}
 		},
 		// get the array of pitches thrown by the pitcher
 		getPitches: function() {
@@ -193,7 +204,7 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 					return pitches[b].length - pitches[a].length;
 				});
 			} else {
-				return [];
+				return ['Pitch Types'];
 			}
 		},
 		// the headers are the pitchers with a blank and 'Number' at the beginning
@@ -258,6 +269,151 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 		],
 	}
 
+	// object for the tree tab
+	$scope.tree = {
+		details: details,
+		// add a selection via the modal and checkboxes
+		add: function(detail) {
+			var body =
+				'<form>' +
+					'<div class="form-group" ng-repeat="datum in data">' +
+						'<div class="checkbox">' +
+							'<label>' +
+								'<input type="checkbox" ng-model="result[datum.value]"> {{ datum.text }}' +
+							'</label>' +
+						'</div>' +
+					'</div>' +
+				'</form>';
+			$scope.modal = options[detail];
+			$scope.openModal('Select the ' + $scope.format.textualize(detail) +
+				' options you would like to include', body, 'Submit', 'Cancel',
+				function(result) {
+					// get the keys, reduce to only those that map to true
+					var keys = Object.keys(result);
+					if (keys.length) {
+						var branches = [];
+						keys.forEach(function(key) {
+							if (result[key]) {
+								branches.push(key);
+							}
+						});
+						$scope.tree.selected.push({
+							detail: detail,
+							branches: branches
+						});
+					}
+					$scope.tree.sort();
+				}
+			);
+		},
+		// edit a selection by removing the previous selection, then add a new one
+		edit: function(detail) {
+			$scope.tree.remove(detail);
+			$scope.tree.add(detail);
+		},
+		// remove a selection by removing the selection
+		remove: function(detail) {
+			$scope.tree.selected.splice($scope.util.find($scope.tree.selected, detail,
+			function(a, b) {
+				return a.detail === b;
+			}), 1);
+			$scope.tree.sort();
+		},
+		// resort the details such that the selected are at the top and in order
+		// and otherwise maintain order
+		sort: function() {
+			$scope.tree.details.sort(function(a, b) {
+				return $scope.util.find($scope.tree.selected, b, function(a, b) {
+					return a.detail === b;
+				}) - $scope.util.find($scope.tree.selected, a, function(a, b) {
+					return a.detail === b;
+				});
+			});
+		},
+		// draw the tree based on the currently selected details
+		draw: function() {
+			$scope.tree.isDrawn = true;
+			// higher number index in selected is base, 0 is the leaf
+			// drawing oriented with base on left, leaves on right
+			// level index refers to the selection index, left (0) to right (max)
+			// branch index refers to the vertical index, top (0) to bottom (max)
+
+			// an additional one for the origin on the far left
+			var numLevels = $scope.tree.selected.length + 1;
+			// find the number of branches on the far right via a product
+			var numBranches = 1;
+			$scope.tree.selected.forEach(function(selection) {
+				numBranches *= selection.branches.length;
+			});
+			var data = [];
+		},
+		// determine whether a detail has been submitted
+		submitted: function(detail) {
+			return $scope.util.find($scope.tree.selected, detail, function(a, b) {
+				return a.detail === b;
+			}) !== SENTINEL;
+		},
+		// get the selections for a detail
+		getSelections: function(detail) {
+			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
+				return a.detail === b;
+			});
+			if (i !== SENTINEL) {
+				var result = [];
+				$scope.tree.selected[i].branches.forEach(function(branch) {
+					result.push(options[detail][branch].text);
+				});
+				return result.join(', ');
+			}
+		},
+		// change the order of selections
+		shiftDown: function(detail) {
+			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
+				return a.detail === b;
+			});
+			// not sentinel and not already at the top
+			if (i > 0) {
+				$scope.tree.swap(i, i - 1);
+			}
+		},
+		// change the order of selections
+		shiftUp: function(detail) {
+			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
+				return a.detail === b;
+			});
+			// not sentinel and not already at the top
+			if (i !== SENTINEL && i !== $scope.tree.selected.length - 1) {
+				$scope.tree.swap(i, i + 1)
+			}
+		},
+		// swap the order of selections with the given indices
+		swap: function(a, b) {
+			var temp = $scope.tree.selected[a];
+			$scope.tree.selected[a] = $scope.tree.selected[b];
+			$scope.tree.selected[b] = temp;
+			$scope.tree.sort(); 
+		},
+		// disable a detail if pitcher isn't yet submitted,
+		// or for drawing if there are no selected details
+		disabled: function(detail) {
+			if (detail === 'draw') {
+				if(!$scope.tree.selected.length) {
+					return true;
+				}
+			}
+			return !$scope.input.submitted.pitcher;
+		},
+		// the selected options for the tree
+		selected: []
+	};
+
+	// use d3 to put the tree into the #tree div
+	// for further manipulation upon drawing
+	var tree = d3.select('#tree')
+		.append('svg')
+		.attr('width', '100%')
+		.attr('height', 400);
+
 	// formatting functions
 	$scope.format = {
 		// textualize data, with a hyphen corresponding to a space
@@ -286,4 +442,92 @@ angular.module('tmhApp', []).controller('tmhController', function($scope) {
 			return num + '%';
 		}
 	}
+
+	// sentinel for unfound elements
+	var SENTINEL = -1;
+
+	// utility functions
+	$scope.util = {
+		// find the index of an element of an array
+		find: function(arr, elem, callback) {
+			callback = callback || function(a, b) {
+				return a === b;
+			};
+			for (var i = 0; i < arr.length; i++) {
+				if (callback(arr[i], elem)) {
+					return i;
+				}
+			}
+			return SENTINEL;
+		}
+	}
+
+	// gets the textual message given the current status
+	$scope.getMessage = function() {
+		if (!$scope.input.submitted.team) {
+			return 'Welcome! Please select a tab above and enter a team below.';
+		} else if (!$scope.input.submitted.pitcher) {
+			return 'Now select the pitcher below.';
+		}
+		if ($scope.view.curr === 'comparison') {
+			if ($scope.input.submitted.situation) {
+				return 'Look to the table to compare the full repetoire of ' +
+					$scope.input.submitted.pitcher.name + ' to the scenario you selected.';
+			} else {
+				return 'Select the details of the situation and hit submit.';
+			}
+		} else if ($scope.view.curr === 'tree') {
+			if ($scope.tree.isDrawn) {
+				return 'See the graph below!';
+			} else {
+				return 'Select branches and order, then hit draw.'
+			}
+		} else {
+			return 'new tab TODO';
+		}
+	}
+
+	// Modal
+	// a helper to open a modal. The tempalte is made from the header, body and buttons
+	// resolve gives the local variables of the modal, if any are given
+	// closeBtn and dismissBtn give the text for each button, if one is to exist at all
+	// cbSuccess and cbFailure are callbacks based on modal selection
+	$scope.openModal = function(header, body, closeBtn, dismissBtn, cbSuccess, cbFailure) {
+		// construct the template from the arguments
+		template = '';
+		template += '<div class="modal-header"><h3 class="modal-title">' + header + '</h3></div>';
+		template += '<div class="modal-body">';
+		// if the body contains a tag paste directly, otherwise wrap in a <p> tag
+		template += (body[0] === '<' ? body : ('<p>' + body + '</p>')) + '</div>';
+		template += '<div class="modal-footer">';
+		template += '<button class="btn btn-success" type="button" ng-click="close(result)">' +
+			(closeBtn || 'close') + '</button>';
+		if (dismissBtn) {
+			template += '<button class="btn btn-danger" type="button" ng-click="dismiss()">' +
+				dismissBtn + '</button>';
+		}
+		template += '</div>';
+
+		var options = {
+			animation  : true,
+			template   : template,
+			backdrop   : 'static',
+			controller : 'ModalInstanceCtrl',
+			resolve    : {
+				data : function() {
+					return $scope.modal;
+				}
+			}
+		}
+
+		$uibModal.open(options).result.then(cbSuccess, cbFailure);
+	};
+});
+
+// the modal controller, which simply takes either a 'yes' or 'no' and sends the proper response
+angular.module('tmhApp').controller('ModalInstanceCtrl', function ($scope, $uibModalInstance, data) {
+	$scope.data = data;
+	$scope.result = {};
+	$scope.close = function(result) { $uibModalInstance.close(result); }
+	$scope.dismiss = function() { $uibModalInstance.dismiss(); }
 });
