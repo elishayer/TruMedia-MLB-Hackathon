@@ -1,0 +1,31 @@
+/* styles.css
+ * Eli Shayer
+ * ----------
+ * The stylesheet for Eli Shayer's entry in the TruMedia Hackathon
+ */
+
+/* maintain a scrollbar for consistency */
+ body {
+ 	overflow-y: scroll;
+ }
+
+ /* message styles */
+ .message {
+    margin: auto;
+    text-align: center;
+    font-size: 24px;
+	border-bottom-color: #000000;
+	border-bottom-style: solid;
+	border-bottom-width: 2px;
+	padding-bottom: 5px;
+	margin-bottom: 10px;
+	border-top-color: #000000;
+	border-top-style: solid;
+	border-top-width: 2px;
+	padding-top: 5px;
+	margin-top: 10px;
+}
+
+.error {
+	color: red;
+}
