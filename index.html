@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- Title, favicon, and meta tags -->
+		<title>TruMedia Hackathon | Eli Shayer</title>
+		<link rel="icon" href="./favicon.ico?">
+		<meta name="description" content="Eli Shayer's entry in the TruMedia Hackathon">
+		<meta name="author" content="Eli Shayer">
+
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<!-- Bootstrap stylesheet -->
+		<link rel="stylesheet"  href="./css/bootstrap.min.css">
+
+		<!-- Font Awesome -->
+		<link rel="stylesheet" href="./font-awesome/css/font-awesome.min.css">
+	</head>
+	<body ng-app="tmhApp" ng-controller="tmhController" ng-cloak>
+		<div class="container">
+			<div class="row" id="intro">
+				<div class="col-xs-12">
+					<h1>The Next Pitch</h1>
+					<h2>Eli Shayer's entry in the TruMedia Hackathon</h2>
+					<p>This website will give insights into what you can expect a pitcher to throw for their next pitch based on the current situation in the game.</p>
+				</div>
+				<div class="col-xs-12" id="tabs">
+					<ul class="nav nav-tabs nav-justified">
+						<li role="presentation" ng-repeat="tab in view.tabs" ng-class="{ active: view.isActive(tab) }" ng-click="view.setActive(tab)">
+							<a href="#" ng-bind="format.textualize(tab)"></a>
+						</li>
+					<ul>
+				</div><!-- #tabs -->
+			</div><!-- #intro -->
+
+			<div class="row">
+				<div class="col-xs-3" id="selects">
+					<h3>Initial Selections</h3>
+					<div ng-repeat="select in input.selects">
+						<form ng-submit="select.submit()" ng-show="select.showForm()">
+							<div class="form-group">
+								<label for="{{ select.type + '-select'}}" ng-bind="select.title"></label>
+								<select class="form-control" id="team-select" ng-model="select.value">
+									<option value="0" ng-bind="'----- Please select a ' + select.type + ' -----'"></option>
+									<option ng-repeat="option in select.options()" value="{{ option }}" ng-bind="option"></option>
+								</select>
+							</div>
+							<button class="btn btn-primary btn-block" role="submit" ng-disabled="select.value === '0'">Submit</button>
+						</form>
+						<form class="form-inline" ng-submit="select.edit()" ng-show="select.showEdit()">
+							<div class="form-group">
+								<label ng-bind="select.result()"></label>
+							</div>
+							<button class="btn btn-success btn-block" role="submit" ng-bind="'Edit the ' + format.textualize(select.type)"></button>
+						</form>
+					</div>
+				</div><!-- #selects -->
+
+				<!-- COMPARISON TAB -->
+				<div class="col-xs-3" id="situation" ng-show="view.isActive('comparison')">
+					<h3>Situation Details</h3>
+					<form ng-submit="input.situation.submit()" ng-show="input.situation.show()">
+						<div class="form-group" ng-repeat="detail in input.situation.details">
+							<label for="{{ 'situation-' + detail }}" ng-bind="format.textualize(detail)"></label>
+							<select class="form-control" id="{{ 'situation-' + detail }}" ng-model="input.situation.values[detail]">
+								<option ng-repeat="option in input.situation.options[detail]" value="{{ option.value }}" ng-bind="option.text"></option>
+							</select>
+						</div>
+						<button class="btn btn-primary btn-block" role="submit">Submit</button>
+					</form>
+				</div><!-- #situation -->
+
+				<div class="col-xs-6" id="results" ng-show="view.isActive('comparison')">
+					<h3>Results Table</h3>
+					<table class="table" ng-show="table.show()">
+						<caption ng-bind="table.caption()"></caption>
+						<thead>
+							<tr>
+								<th ng-repeat="pitch in table.getHeaders()" ng-bind="pitch"></th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr ng-repeat="row in table.rows" ng-show="row.show()">
+								<th ng-bind="row.header"></th>
+								<td ng-bind="row.getNum()"></td>
+								<td ng-repeat="pitch in table.getPitches()" ng-bind="row.getCell(pitch)"></td>
+							</tr>
+						</tbody>
+					</table>
+				</div><!-- #results -->
+				<!-- END COMPARISON TAB -->
+
+				<!-- TREE TAB -->
+				<div class="col-xs-3" ng-show="view.isActive('tree')">
+					select
+				</div>
+				<div class="col-xs-6" ng-show="view.isActive('tree')">
+					tree
+				</div>
+				<!-- END TREE TAB-->
+
+			</div><!-- .row -->
+		</div><!-- .container -->
+
+		<!-- library scripts -->
+		<script src="./js/libraries/bootstrap.min.js"></script>
+		<script src="./js/libraries/d3.v3.min.js"></script>
+		<script src="./js/libraries/angular.min.js"></script>
+
+		<!-- scripts -->
+		<script src="./data/2015-WS-data.js"></script>
+		<script src="./js/constants.js"></script>
+		<script src="./js/process.js"></script>
+		<script src="./js/main.js"></script>
+	</body>
+</html>
