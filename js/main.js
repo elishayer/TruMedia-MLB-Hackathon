@@ -6,13 +6,13 @@
  */
 
 // the details with which pitchers can be separated
-var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand' ];
+var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand', 'previous-pitch' ];
 
 angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
-	// tabs and the current view, initialized to comparison
+	// tabs and the current view, initialized to splits
 	$scope.view = {
-		tabs: [ 'comparison', 'tree' ],
-		curr: 'comparison',
+		tabs: [ 'splits', 'tree' ],
+		curr: 'splits',
 		setActive: function(tab) {
 			this.curr = tab;
 		},
@@ -135,38 +135,9 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			submit: function() {
 				// initialize the submitted situation to be an empty object
 				// to hold the distribution for the situation and num pitches
-				$scope.input.submitted.situation = {
-					distribution: {},
-					num: 0
-				};
-
-				// get the number of included pitches by type
-				// and keep track of the total included pitches
-				Object.keys($scope.input.submitted.pitcher.pitches).forEach(function(type) {
-					// initialize key in distribution object for the pitch type
-					$scope.input.submitted.situation.distribution[type] = 0;
-
-					$scope.input.submitted.pitcher.pitches[type].forEach(function(pitch) {
-						// included if the pitch is included for every situation detail
-						var included = true;
-						$scope.input.situation.details.forEach(function(detail) {
-							included = included && isIncluded[detail](parseInt(
-								$scope.input.situation.values[detail]), pitch);
-						});
-
-						// if included increment the total counter and the type counter
-						if (included) {
-							$scope.input.submitted.situation.num++;
-							$scope.input.submitted.situation.distribution[type]++;
-						}
-					});
-				});
-
-				// get the proportion on [0-1] for each pitch type
-				for (type in $scope.input.submitted.situation.distribution) {
-					$scope.input.submitted.situation.distribution[type] /=
-						$scope.input.submitted.situation.num;
-				}
+				$scope.input.submitted.situation = $scope.getSplitDistribution(
+					$scope.input.submitted.pitcher.pitches,
+					$scope.input.situation.values);
 			},
 			// initialize the value of each situation to '0'
 			initialize: function() {
@@ -183,6 +154,44 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		}
 	}
 
+	// helper function to get the pitch distribution for given split details
+	$scope.getSplitDistribution = function(pitches, details) {
+		// initialize a distribution object
+		var distribution = {};
+		var num = 0;
+
+		// get the number of included pitches by type
+		// and keep track of the total included pitches
+		Object.keys(pitches).forEach(function(type) {
+			// initialize key in distribution object for the pitch type
+			distribution[type] = 0;
+
+			$scope.input.submitted.pitcher.pitches[type].forEach(function(pitch) {
+				// included if the pitch is included for every situation detail
+				var included = true;
+				$scope.input.situation.details.forEach(function(detail) {
+					included = included && isIncluded[detail](parseInt(details[detail]), pitch);
+				});
+
+				// if included increment the total counter and the type counter
+				if (included) {
+					num++;
+					distribution[type]++;
+				}
+			});
+		});
+
+		// get the proportion on [0-1] for each pitch type
+		for (type in distribution) {
+			distribution[type] /= num;
+		}
+
+		return {
+			distribution: distribution,
+			num: num
+		}
+	}
+
 	// initialize the situation details
 	$scope.input.situation.initialize();
 
@@ -193,6 +202,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			if ($scope.input.submitted.pitcher) {
 				return $scope.input.submitted.pitcher.name + ' of ' + 
 					$scope.input.submitted.team;
+			} else {
+				return 'Pitch Distribution table';
 			}
 		},
 		// get the array of pitches thrown by the pitcher
@@ -264,14 +275,21 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 						return '';
 					}
 				},
-				getNum: function() { return '-'; },
+				getNum: function() {
+					if ($scope.input.submitted.situation) {
+						return '-';
+					} else {
+						return '';
+					}
+				}
 			}
 		],
 	}
 
 	// object for the tree tab
 	$scope.tree = {
-		details: details,
+		// deep copy so sorting doesn't change the order in different tabs
+		details: angular.copy(details),
 		// add a selection via the modal and checkboxes
 		add: function(detail) {
 			var body =
@@ -330,22 +348,231 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				});
 			});
 		},
+		// delete the tree svg for the sake of updating
+		delete: function() {
+			$scope.tree.isDrawn = false;
+		},
 		// draw the tree based on the currently selected details
 		draw: function() {
 			$scope.tree.isDrawn = true;
+
+			// remove any previous svg and initialize a new svg
+			d3.select('svg').remove();
+			var tree = d3.select('#tree')
+				.append('svg')
+				.attr('width', document.getElementById('tree').clientWidth)
+				.attr('height', 700);
+
+			// SVG constants
+			var width = tree.attr('width');
+			var height = tree.attr('height');
+			var buffer = 20;
+			var bufferRight = 80;
+			var r = 3;
+
 			// higher number index in selected is base, 0 is the leaf
 			// drawing oriented with base on left, leaves on right
 			// level index refers to the selection index, left (0) to right (max)
 			// branch index refers to the vertical index, top (0) to bottom (max)
 
-			// an additional one for the origin on the far left
-			var numLevels = $scope.tree.selected.length + 1;
-			// find the number of branches on the far right via a product
-			var numBranches = 1;
-			$scope.tree.selected.forEach(function(selection) {
-				numBranches *= selection.branches.length;
+			// construct the data
+			var leaves = [{
+				leafCount: 1,
+				details: []
+			}];
+
+			$scope.tree.selected.forEach(function(selection, i) {
+				var details = angular.copy(leaves[i].details);
+				details.push({
+					detail: selection.detail,
+					branches: selection.branches
+				});
+				leaves.push({
+					leafCount: leaves[i].leafCount * selection.branches.length,
+					details: details
+				});
 			});
-			var data = [];
+
+			// append a dot for each node in the tree
+			var groups = tree.selectAll('g')
+				.data(leaves)
+				.enter()
+				.append('g');
+
+			// function for the data call for the groups
+			groupDataFunction = function(d, level) {
+				var arr = [];
+				for (var i = 0; i < d.leafCount; i++) {
+					arr.push({
+						level: level,
+						leafCount: d.leafCount,
+						details: d.details
+					});
+				}
+				return arr;
+			}
+
+			// get the x coordinate, with a negative level far left
+			getX = function(level) {
+				return level >= 0 ? buffer + level / $scope.tree.selected.length *
+					(width - buffer - bufferRight) : buffer;
+			}
+
+			// get the y coordinate, with a negative level middle vertically
+			// plus one to center vertically (i.e. 2nd of 3 is in middle)
+			getY = function(leafCount, i) {
+				return i >= 0 ? buffer + (i + 1) / (leafCount + 1) *
+					(height - 2 * buffer) : height / 2;
+			}
+
+			// add nodes for each branch of the tree
+			groups.selectAll('circle')
+				.data(groupDataFunction)
+				.enter()
+				.append('circle')
+				.attr({
+					cx: function(d) { return getX(d.level); },
+					cy: function(d, i) { return getY(d.leafCount, i)},
+					r: r
+				});
+
+			// add lines between nodes
+			groups.selectAll('line')
+				.data(groupDataFunction)
+				.enter()
+				.append('line')
+				.attr({
+					x1: function(d) { return getX(d.level - 1); },
+					y1: function(d, i) {
+						// get the previous leafcount through reversing the product
+						// guard against no details
+						var lastDetail = d.details[d.details.length - 1];
+						if (lastDetail) {
+							lcFactor = lastDetail.branches.length;
+							return getY(d.leafCount / lcFactor, Math.trunc(i / lcFactor));
+						} else {
+							return getY(0, i - 1);
+						}
+					},
+					x2: function(d) { return getX(d.level); },
+					y2: function(d, i) { return getY(d.leafCount, i)},
+					stroke: 'black'
+				});
+
+			// get the text enter object
+			var textEnter = groups.selectAll('text')
+				// for each level
+				.data(function(d, level) {
+					var arr = [];
+					// for each leaf
+					for (var i = 0; i < d.leafCount; i++) {
+						// construct the detail object of the given details
+						details = {};
+						var branch = i;
+						for (j = level; j > 0; j--) {
+							var detail = d.details[j - 1];
+							var lcFactor = detail.branches.length
+							details[detail.detail] = detail.branches[branch % lcFactor];
+							branch = Math.trunc(branch / lcFactor);
+						}
+
+						// fill in the details that aren't specified as 0 (anything)
+						$scope.tree.details.forEach(function(detail) {
+							if (!details.hasOwnProperty(detail)) {
+								details[detail] = 0;
+							}
+						});
+
+						// get the distribution
+						var distribution = $scope.getSplitDistribution(
+							$scope.input.submitted.pitcher.pitches, details).distribution;
+
+						// sort by frequency in an array
+						var sortedDistribution = [];
+						for (pitch in distribution) {
+							sortedDistribution.push({
+								pitch: pitch,
+								frequency: distribution[pitch]
+							});
+						}
+						sortedDistribution.sort(function(a, b) {
+							return b.frequency - a.frequency;
+						})
+
+						// push the sorted distribution to the array
+						arr.push({
+							level: level,
+							leafCount: d.leafCount,
+							distribution: sortedDistribution,
+							details: d.details
+						});
+					}
+					return arr;
+				})
+				.enter();
+
+			// display the top three pitches
+			for (var rank = 0; rank < 3; rank++) {
+				// pitch frequency labels
+				textEnter.append('text')
+					.attr({
+						x: function(d) { return getX(d.level) + r; },
+						y: function(d, i) { return getY(d.leafCount, i) + (rank - 1) * 12 + r; },
+						fill: 'blue'
+					})
+					.text(function(d, i) {
+						if (d.distribution[rank]) {
+							return d.distribution[rank].pitch + ' (' +
+								$scope.format.percent(d.distribution[rank].frequency) + ')';
+						}
+					});
+			}
+
+
+			// textual category labels
+			var categoryLabels = textEnter.append('text')
+				.attr({
+					x: function(d, i) { return getX(d.level); },
+					y: buffer
+				})
+				.text(function(d, i) {
+					if (i === 0) {
+						return $scope.format.textualize(d.level ?
+							d.details[d.details.length - 1].detail : 'Overall');
+					}
+				});
+
+			// adjust x location to center over the node (and not go off the svg)
+			categoryLabels.attr({
+				x: function() {
+					return Math.max(0, Math.min(width - this.clientWidth,
+						d3.select(this).attr('x') - this.clientWidth / 2));
+				}
+			})
+
+			// textual detail labels
+			var detailLabels = textEnter.append('text')
+				.attr({
+					x: function(d) { return getX(d.level); },
+					y: function(d, i) { return getY(d.leafCount, i); },
+					fill: 'red'
+				})
+				.text(function(d, i) {
+					if (d.level) {
+						var lastDetail = d.details[d.details.length - 1];
+						return options[lastDetail.detail]
+							[lastDetail.branches[i % lastDetail.branches.length]].text;
+					} else {
+						return '';
+					}
+				});
+
+			// adjust location to the left of the node
+			detailLabels.attr({
+				x: function() {
+					return d3.select(this).attr('x') - this.clientWidth - 2 * r ;
+				},
+			});
 		},
 		// determine whether a detail has been submitted
 		submitted: function(detail) {
@@ -368,22 +595,21 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		},
 		// change the order of selections
 		shiftDown: function(detail) {
-			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
-				return a.detail === b;
-			});
-			// not sentinel and not already at the top
-			if (i > 0) {
-				$scope.tree.swap(i, i - 1);
-			}
+			$scope.tree.shift(detail, function(i) { return i > 0; }, -1);
 		},
 		// change the order of selections
 		shiftUp: function(detail) {
+			$scope.tree.shift(detail, function(i) {
+				return i !== SENTINEL && i !== $scope.tree.selected.length - 1;
+			}, 1);
+		},
+		shift: function(detail, conditionCallback, offset) {
 			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
 				return a.detail === b;
 			});
-			// not sentinel and not already at the top
-			if (i !== SENTINEL && i !== $scope.tree.selected.length - 1) {
-				$scope.tree.swap(i, i + 1)
+			// if condition passes, switch with the element offset away
+			if (conditionCallback(i)) {
+				$scope.tree.swap(i, i + offset)
 			}
 		},
 		// swap the order of selections with the given indices
@@ -396,23 +622,12 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		// disable a detail if pitcher isn't yet submitted,
 		// or for drawing if there are no selected details
 		disabled: function(detail) {
-			if (detail === 'draw') {
-				if(!$scope.tree.selected.length) {
-					return true;
-				}
-			}
-			return !$scope.input.submitted.pitcher;
+			return !$scope.input.submitted.pitcher ||
+				detail === 'draw' && !$scope.tree.selected.length;
 		},
 		// the selected options for the tree
 		selected: []
 	};
-
-	// use d3 to put the tree into the #tree div
-	// for further manipulation upon drawing
-	var tree = d3.select('#tree')
-		.append('svg')
-		.attr('width', '100%')
-		.attr('height', 400);
 
 	// formatting functions
 	$scope.format = {
@@ -438,6 +653,10 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			num = Math.round(num);
 			for (var i = 0; i < digits - 2; i++) {
 				num /= 10;
+			}
+			// guard against "NaN%"
+			if (isNaN(num)) {
+				return '---';
 			}
 			return num + '%';
 		}
@@ -469,7 +688,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		} else if (!$scope.input.submitted.pitcher) {
 			return 'Now select the pitcher below.';
 		}
-		if ($scope.view.curr === 'comparison') {
+		if ($scope.view.curr === 'splits') {
 			if ($scope.input.submitted.situation) {
 				return 'Look to the table to compare the full repetoire of ' +
 					$scope.input.submitted.pitcher.name + ' to the scenario you selected.';
@@ -478,12 +697,10 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			}
 		} else if ($scope.view.curr === 'tree') {
 			if ($scope.tree.isDrawn) {
-				return 'See the graph below!';
+				return 'See the graph below! Hit Update ';
 			} else {
-				return 'Select branches and order, then hit draw.'
+				return 'Select branches and their order, then hit draw.'
 			}
-		} else {
-			return 'new tab TODO';
 		}
 	}
 

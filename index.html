@@ -25,7 +25,9 @@
 				<div class="col-xs-12">
 					<h1>The Next Pitch</h1>
 					<h2>Eli Shayer's entry in the TruMedia Hackathon</h2>
-					<p>This website will give insights into what you can expect a pitcher to throw for their next pitch based on the current situation in the game.</p>
+					<p>This website will give insights into what you can expect a pitcher to throw for their next pitch based on the current situation in the game. These are based on splits, such as dividing pitches by whether they occured with no outs, one out, or two outs. Some splits are composite splits, such as with count. Each possible count can be selected, but the count being in the pitcher's favor is a helpful composite split, for example.</p>
+					<p>The Splits tab lets you select a specific split and examine the difference between any pitcher's standard repetoire and their pitch selection tendencies in that split.</p>
+					<p>The Tree tab extends the splits tab to allow a custom built tree of splits, and displays the top three pitches selected in each of the several splits that comprise the tree.</p>
 				</div>
 				<div class="col-xs-12" id="tabs">
 					<ul class="nav nav-tabs nav-justified">
@@ -60,8 +62,8 @@
 					</div>
 				</div><!-- #selects -->
 
-				<!-- COMPARISON TAB -->
-				<div class="col-xs-3" id="situation" ng-show="view.isActive('comparison')">
+				<!-- SPLITS TAB -->
+				<div class="col-xs-3" id="situation" ng-show="view.isActive('splits')">
 					<h3>Situation Details</h3>
 					<form ng-submit="input.situation.submit()">
 						<div class="form-group" ng-repeat="detail in input.situation.details">
@@ -74,7 +76,7 @@
 					</form>
 				</div><!-- #situation -->
 
-				<div class="col-xs-6" id="results" ng-show="view.isActive('comparison')">
+				<div class="col-xs-6" id="results" ng-show="view.isActive('splits')">
 					<h3>Results Table</h3>
 					<table class="table">
 						<caption ng-bind="table.caption()"></caption>
@@ -84,7 +86,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr ng-repeat="row in table.rows" ng-show="row.show()">
+							<tr ng-repeat="row in table.rows">
 								<th ng-bind="row.header"></th>
 								<td ng-bind="row.getNum()"></td>
 								<td ng-repeat="pitch in table.getPitches()" ng-bind="row.getCell(pitch)"></td>
@@ -99,7 +101,8 @@
 					<h3>Branches and Order</h3>
 					<form>
 						<div class="form-group">
-							<button class="btn btn-warning btn-block" role="submit" ng-click="tree.draw()" ng-disabled="tree.disabled('draw')" ng-bind="'Draw the Tree (' + tree.selected.length + ' Levels)'">Draw the Tree</button>
+							<button class="btn btn-warning btn-block" ng-click="tree.draw()" ng-disabled="tree.disabled('draw')" ng-bind="'Draw the Tree (' + tree.selected.length + ' Levels)'" ng-show="!tree.isDrawn"></button>
+							<button class="btn btn-warning btn-danger" ng-click="tree.delete()" ng-show="tree.isDrawn">Update the Tree Inputs</button>
 						</div>
 						<div class="form-group" ng-repeat="detail in tree.details">
 							<div ng-show="tree.submitted(detail)">
@@ -108,13 +111,13 @@
 									<span ng-bind="tree.getSelections(detail)"></span>
 								</span>
 								<p>
-									<button class="btn btn-default" ng-click="tree.shiftUp(detail)">Shift Up</button>
-									<button class="btn btn-default" ng-click="tree.shiftDown(detail)">Shift Down</button>
+									<button class="btn btn-default" ng-click="tree.shiftUp(detail)" ng-disabled="tree.isDrawn">Shift Up</button>
+									<button class="btn btn-default" ng-click="tree.shiftDown(detail)" ng-disabled="tree.isDrawn">Shift Down</button>
 								</p>
-								<button class="btn btn-success" ng-bind="'Edit ' + format.textualize(detail)" ng-click="tree.edit(detail)"></button>
-								<button class="btn btn-danger" ng-bind="'Remove ' + format.textualize(detail)" ng-click="tree.remove(detail)"></button>
+								<button class="btn btn-success" ng-bind="'Edit ' + format.textualize(detail)" ng-click="tree.edit(detail)" ng-disabled="tree.isDrawn"></button>
+								<button class="btn btn-danger" ng-bind="'Remove ' + format.textualize(detail)" ng-click="tree.remove(detail)" ng-disabled="tree.isDrawn"></button>
 							</div>
-							<button class="btn btn-primary btn-block" ng-show="!tree.submitted(detail)" ng-bind="'Add ' + format.textualize(detail)" ng-click="tree.add(detail)" ng-disabled="tree.disabled(detail)"></button>
+							<button class="btn btn-primary btn-block" ng-show="!tree.submitted(detail)" ng-bind="'Add ' + format.textualize(detail)" ng-click="tree.add(detail)" ng-disabled="tree.disabled(detail) || tree.isDrawn"></button>
 						</div>
 					</form>
 				</div>
@@ -132,7 +135,7 @@
 		<script src="./js/libraries/ui-bootstrap-tpls-0.14.3.min.js"></script>
 
 		<!-- scripts -->
-		<script src="./data/2015-WS-data.js"></script>
+		<script src="./data/2015.js"></script>
 		<script src="./js/constants.js"></script>
 		<script src="./js/process.js"></script>
 		<script src="./js/main.js"></script>
