@@ -116,7 +116,7 @@ maps.bases = {
 // predicate for whether the bases on a pitch match the selected option
 isIncluded.bases = function(option, pitch) {
 	return option === 0 ||
-		option === 8 && pitch.bases !== 0 && pitch.bases !== 1 ||
+		option === 9 && pitch.bases !== 1 && pitch.bases !== 2 ||
 		option === pitch.bases;
 }
 
