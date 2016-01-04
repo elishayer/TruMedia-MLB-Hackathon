@@ -15,6 +15,16 @@ isSkipPitch = function(pitch) {
 	return false;
 }
 
+// a general contains for an array holding primative elements
+contains = function(arr, elem) {
+	for (var i = 0; i < arr.length; i++) {
+		if (arr[i] === elem) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // ------------------------------------ CONSTANTS
 // sentinel for data not found
 var SENTINEL = -1;
@@ -51,45 +61,57 @@ var pitchers = {};
 // initialize to no previous pitch
 var prevPitchType = '';
 
-// for each pitch add the team to the teams array
-data.forEach(function(pitch) {
-	if (!isSkipPitch(pitch)) {
-		// add new teams to the teams object
-		[ pitch[I.HOME], pitch[I.VISITOR] ].forEach(function(team) {
-			if (!teams.hasOwnProperty(team)) {
-				teams[team] = { pitchers: [] }
-			}
-		});
+processData = function(data) {
+	// for each pitch add the team to the teams array
+	data.forEach(function(pitch) {
+		if (!isSkipPitch(pitch)) {
+			// add new teams to the teams object
+			[ pitch[I.HOME], pitch[I.VISITOR] ].forEach(function(team) {
+				if (!teams.hasOwnProperty(team)) {
+					teams[team] = {};
+					[ '2013', '2014', '2015' ].forEach(function(year) {
+						teams[team][year] = {
+							pitchers: []
+						}
+					});
+				}
+			});
 
-		// add new pitchers to the object and append to team list
-		if (!pitchers.hasOwnProperty(pitch[I.PITCHER])) {
-			// add to the pitchers object
-			pitchers[pitch[I.PITCHER]] = {
-				hand   : pitch[I.PITCHER_HAND],
-				pitches: {}
+			// add new pitchers to the object and append to team list
+			if (!pitchers.hasOwnProperty(pitch[I.PITCHER])) {
+				// add to the pitchers object
+				pitchers[pitch[I.PITCHER]] = {};
+				[ '2013', '2014', '2015' ].forEach(function(year) {
+					pitchers[pitch[I.PITCHER]][year] = {
+						hand   : pitch[I.PITCHER_HAND],
+						pitches: {}
+					}
+				});
 			}
 
-			// append to the team list
+			// append to the team list if new for the team-year combination
 			var pitcherTeam = pitch[I.SIDE] === 'T' ? pitch[I.HOME] : pitch[I.VISITOR];
-			teams[pitcherTeam].pitchers.push(pitch[I.PITCHER]);
+			if (!contains(teams[pitcherTeam][pitch[I.YEAR]].pitchers, pitch[I.PITCHER])) {
+				teams[pitcherTeam][pitch[I.YEAR]].pitchers.push(pitch[I.PITCHER]);
+			}
+
+			// if a new pitch, add a new key and initialize the array
+			if (!pitchers[pitch[I.PITCHER]][pitch[I.YEAR]].pitches.hasOwnProperty(pitch[I.PITCH_TYPE])) {
+				pitchers[pitch[I.PITCHER]][pitch[I.YEAR]].pitches[pitch[I.PITCH_TYPE]] = [];
+			}
+
+			// add to the pitches array
+			pitchers[pitch[I.PITCHER]][pitch[I.YEAR]].pitches[pitch[I.PITCH_TYPE]].push({
+				inning: pitch[I.INNING],
+				count : maps.count[pitch[I.BALLS]][pitch[I.STRIKES]],
+				bases: maps.bases[pitch[I.FIRST_BASE] * 1][pitch[I.SECOND_BASE] * 1][pitch[I.THIRD_BASE] * 1],
+				out: maps.out[pitch[I.OUTS]],
+				'batter-hand': maps['batter-hand'][pitch[I.BATTER_HAND]],
+				'previous-pitch': maps['previous-pitch'][prevPitchType]
+			});
+
+			// update the previous pitch, but only if it is not the first of a PA
+			prevPitchType = (pitch[I.PA_RESULT].length === 0 ? pitch[I.PITCH_TYPE] : null);
 		}
-
-		// if a new pitch, add a new key and initialize the array
-		if (!pitchers[pitch[I.PITCHER]].pitches.hasOwnProperty(pitch[I.PITCH_TYPE])) {
-			pitchers[pitch[I.PITCHER]].pitches[pitch[I.PITCH_TYPE]] = [];
-		}
-
-		// add to the pitches array
-		pitchers[pitch[I.PITCHER]].pitches[pitch[I.PITCH_TYPE]].push({
-			inning: pitch[I.INNING],
-			count : maps.count[pitch[I.BALLS]][pitch[I.STRIKES]],
-			bases: maps.bases[pitch[I.FIRST_BASE] * 1][pitch[I.SECOND_BASE] * 1][pitch[I.THIRD_BASE] * 1],
-			out: maps.out[pitch[I.OUTS]],
-			'batter-hand': maps['batter-hand'][pitch[I.BATTER_HAND]],
-			'previous-pitch': maps['previous-pitch'][prevPitchType]
-		});
-
-		// update the previous pitch, but only if it is not the first of a PA
-		prevPitchType = (pitch[I.PA_RESULT].length === 0 ? pitch[I.PITCH_TYPE] : null);
-	}
-});
+	});
+}

@@ -19,8 +19,9 @@
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="./css/styles.css">
 	</head>
-	<body ng-app="tmhApp" ng-controller="tmhController" ng-cloak>
-		<div class="container">
+	<body ng-app="tmhApp" ng-controller="tmhController">
+		<h2 class="center" ng-show="false">The data is currently loading. It requires about 20 seconds.</h2>
+		<div class="container" ng-cloak>
 			<div class="row" id="intro">
 				<div class="col-xs-12">
 					<h1>The Next Pitch</h1>
@@ -144,8 +145,12 @@
 		<script src="./js/libraries/angular.min.js"></script>
 		<script src="./js/libraries/ui-bootstrap-tpls-0.14.3.min.js"></script>
 
+		<!-- data -->
+		<script src="./data/2013.js"></script>
+		<script src="./data/2014.js"></script>
+		<script src="./data/2015.js"></script>
+
 		<!-- scripts -->
-		<script src="./data/2015short.js"></script>
 		<script src="./js/constants.js"></script>
 		<script src="./js/process.js"></script>
 		<script src="./js/main.js"></script>
