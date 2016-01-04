@@ -99,7 +99,8 @@
 					<h3>Branches and Order</h3>
 					<form>
 						<div class="form-group">
-							<button class="btn btn-warning btn-block" role="submit" ng-click="tree.draw()" ng-disabled="tree.disabled('draw')" ng-bind="'Draw the Tree (' + tree.selected.length + ' Levels)'">Draw the Tree</button>
+							<button class="btn btn-warning btn-block" ng-click="tree.draw()" ng-disabled="tree.disabled('draw')" ng-bind="'Draw the Tree (' + tree.selected.length + ' Levels)'" ng-show="!tree.isDrawn"></button>
+							<button class="btn btn-warning btn-danger" ng-click="tree.delete()" ng-show="tree.isDrawn">Update the Tree Inputs</button>
 						</div>
 						<div class="form-group" ng-repeat="detail in tree.details">
 							<div ng-show="tree.submitted(detail)">
@@ -108,13 +109,13 @@
 									<span ng-bind="tree.getSelections(detail)"></span>
 								</span>
 								<p>
-									<button class="btn btn-default" ng-click="tree.shiftUp(detail)">Shift Up</button>
-									<button class="btn btn-default" ng-click="tree.shiftDown(detail)">Shift Down</button>
+									<button class="btn btn-default" ng-click="tree.shiftUp(detail)" ng-disabled="tree.isDrawn">Shift Up</button>
+									<button class="btn btn-default" ng-click="tree.shiftDown(detail)" ng-disabled="tree.isDrawn">Shift Down</button>
 								</p>
-								<button class="btn btn-success" ng-bind="'Edit ' + format.textualize(detail)" ng-click="tree.edit(detail)"></button>
-								<button class="btn btn-danger" ng-bind="'Remove ' + format.textualize(detail)" ng-click="tree.remove(detail)"></button>
+								<button class="btn btn-success" ng-bind="'Edit ' + format.textualize(detail)" ng-click="tree.edit(detail)" ng-disabled="tree.isDrawn"></button>
+								<button class="btn btn-danger" ng-bind="'Remove ' + format.textualize(detail)" ng-click="tree.remove(detail)" ng-disabled="tree.isDrawn"></button>
 							</div>
-							<button class="btn btn-primary btn-block" ng-show="!tree.submitted(detail)" ng-bind="'Add ' + format.textualize(detail)" ng-click="tree.add(detail)" ng-disabled="tree.disabled(detail)"></button>
+							<button class="btn btn-primary btn-block" ng-show="!tree.submitted(detail)" ng-bind="'Add ' + format.textualize(detail)" ng-click="tree.add(detail)" ng-disabled="tree.disabled(detail) || tree.isDrawn"></button>
 						</div>
 					</form>
 				</div>
