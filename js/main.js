@@ -351,21 +351,23 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		// delete the tree svg for the sake of updating
 		delete: function() {
 			$scope.tree.isDrawn = false;
-			d3.select('svg').remove();
 		},
 		// draw the tree based on the currently selected details
 		draw: function() {
 			$scope.tree.isDrawn = true;
 
+			// remove any previous svg and initialize a new svg
+			d3.select('svg').remove();
 			var tree = d3.select('#tree')
 				.append('svg')
 				.attr('width', document.getElementById('tree').clientWidth)
-				.attr('height', 600);
+				.attr('height', 700);
 
 			// SVG constants
 			var width = tree.attr('width');
 			var height = tree.attr('height');
-			var buffer = 80;
+			var buffer = 20;
+			var bufferRight = 80;
 			var r = 3;
 
 			// higher number index in selected is base, 0 is the leaf
@@ -413,7 +415,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			// get the x coordinate, with a negative level far left
 			getX = function(level) {
 				return level >= 0 ? buffer + level / $scope.tree.selected.length *
-					(width - 2 * buffer) : buffer;
+					(width - buffer - bufferRight) : buffer;
 			}
 
 			// get the y coordinate, with a negative level middle vertically
@@ -695,9 +697,9 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			}
 		} else if ($scope.view.curr === 'tree') {
 			if ($scope.tree.isDrawn) {
-				return 'See the graph below!';
+				return 'See the graph below! Hit Update ';
 			} else {
-				return 'Select branches and order, then hit draw.'
+				return 'Select branches and their order, then hit draw.'
 			}
 		}
 	}
