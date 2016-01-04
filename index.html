@@ -60,8 +60,8 @@
 					</div>
 				</div><!-- #selects -->
 
-				<!-- COMPARISON TAB -->
-				<div class="col-xs-3" id="situation" ng-show="view.isActive('comparison')">
+				<!-- SPLITS TAB -->
+				<div class="col-xs-3" id="situation" ng-show="view.isActive('splits')">
 					<h3>Situation Details</h3>
 					<form ng-submit="input.situation.submit()">
 						<div class="form-group" ng-repeat="detail in input.situation.details">
@@ -74,7 +74,7 @@
 					</form>
 				</div><!-- #situation -->
 
-				<div class="col-xs-6" id="results" ng-show="view.isActive('comparison')">
+				<div class="col-xs-6" id="results" ng-show="view.isActive('splits')">
 					<h3>Results Table</h3>
 					<table class="table">
 						<caption ng-bind="table.caption()"></caption>
@@ -84,7 +84,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr ng-repeat="row in table.rows" ng-show="row.show()">
+							<tr ng-repeat="row in table.rows">
 								<th ng-bind="row.header"></th>
 								<td ng-bind="row.getNum()"></td>
 								<td ng-repeat="pitch in table.getPitches()" ng-bind="row.getCell(pitch)"></td>

@@ -9,10 +9,10 @@
 var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand' ];
 
 angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
-	// tabs and the current view, initialized to comparison
+	// tabs and the current view, initialized to splits
 	$scope.view = {
-		tabs: [ 'comparison', 'tree' ],
-		curr: 'comparison',
+		tabs: [ 'splits', 'tree' ],
+		curr: 'splits',
 		setActive: function(tab) {
 			this.curr = tab;
 		},
@@ -193,6 +193,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			if ($scope.input.submitted.pitcher) {
 				return $scope.input.submitted.pitcher.name + ' of ' + 
 					$scope.input.submitted.team;
+			} else {
+				return 'Pitch Distribution table';
 			}
 		},
 		// get the array of pitches thrown by the pitcher
@@ -264,7 +266,13 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 						return '';
 					}
 				},
-				getNum: function() { return '-'; },
+				getNum: function() {
+					if ($scope.input.submitted.situation) {
+						return '-';
+					} else {
+						return '';
+					}
+				}
 			}
 		],
 	}
@@ -338,14 +346,51 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			// level index refers to the selection index, left (0) to right (max)
 			// branch index refers to the vertical index, top (0) to bottom (max)
 
-			// an additional one for the origin on the far left
-			var numLevels = $scope.tree.selected.length + 1;
-			// find the number of branches on the far right via a product
-			var numBranches = 1;
-			$scope.tree.selected.forEach(function(selection) {
-				numBranches *= selection.branches.length;
+			// construct the data
+			var leaves = [{
+				leafCount: 1,
+				details: []
+			}];
+
+			$scope.tree.selected.forEach(function(selection, i) {
+				var details = angular.copy(leaves[i].details);
+				details.push({
+					detail: selection.detail,
+					branches: selection.branches
+				});
+				leaves.push({
+					leafCount: leaves[i].leafCount * selection.branches.length,
+					details: details
+				});
 			});
-			var data = [];
+
+			// append a dot for each node in the tree
+			tree.selectAll('g')
+				.data(leaves)
+				.enter()
+				.append('g')
+				.selectAll('circle')
+				.data(function(d, level) {
+					console.log(d);
+					var arr = [];
+					for (var i = 0; i < d.leafCount; i++) {
+						arr.push({
+							details: {}
+						});
+						d.details.forEach(function(detail) {
+							arr[i].details[detail] = detail.branches[i % detail.branches.length];
+						});
+					}
+					console.log(arr);
+					return arr;
+				})
+				.enter()
+				.append('circle')
+				.attr({
+					cx: 100,
+					cy: 100,
+					r: 5
+				});
 		},
 		// determine whether a detail has been submitted
 		submitted: function(detail) {
@@ -368,22 +413,21 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		},
 		// change the order of selections
 		shiftDown: function(detail) {
-			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
-				return a.detail === b;
-			});
-			// not sentinel and not already at the top
-			if (i > 0) {
-				$scope.tree.swap(i, i - 1);
-			}
+			$scope.tree.shift(detail, function(i) { return i > 0; }, -1);
 		},
 		// change the order of selections
 		shiftUp: function(detail) {
+			$scope.tree.shift(detail, function(i) {
+				return i !== SENTINEL && i !== $scope.tree.selected.length - 1;
+			}, 1);
+		},
+		shift: function(detail, conditionCallback, offset) {
 			var i = $scope.util.find($scope.tree.selected, detail, function(a, b) {
 				return a.detail === b;
 			});
-			// not sentinel and not already at the top
-			if (i !== SENTINEL && i !== $scope.tree.selected.length - 1) {
-				$scope.tree.swap(i, i + 1)
+			// if condition passes, switch with the element offset away
+			if (conditionCallback(i)) {
+				$scope.tree.swap(i, i + offset)
 			}
 		},
 		// swap the order of selections with the given indices
@@ -396,12 +440,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		// disable a detail if pitcher isn't yet submitted,
 		// or for drawing if there are no selected details
 		disabled: function(detail) {
-			if (detail === 'draw') {
-				if(!$scope.tree.selected.length) {
-					return true;
-				}
-			}
-			return !$scope.input.submitted.pitcher;
+			return !$scope.input.submitted.pitcher ||
+				detail === 'draw' && !$scope.tree.selected.length;
 		},
 		// the selected options for the tree
 		selected: []
@@ -469,7 +509,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		} else if (!$scope.input.submitted.pitcher) {
 			return 'Now select the pitcher below.';
 		}
-		if ($scope.view.curr === 'comparison') {
+		if ($scope.view.curr === 'splits') {
 			if ($scope.input.submitted.situation) {
 				return 'Look to the table to compare the full repetoire of ' +
 					$scope.input.submitted.pitcher.name + ' to the scenario you selected.';
