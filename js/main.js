@@ -11,7 +11,7 @@ var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand', 'previous-pitc
 angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
 	// tabs and the current view, initialized to splits
 	$scope.view = {
-		tabs: [ 'splits', 'tree' ],
+		tabs: [ 'splits', 'tree', 'reference' ],
 		curr: 'splits',
 		setActive: function(tab) {
 			this.curr = tab;
@@ -629,6 +629,50 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		selected: []
 	};
 
+	// the data for the reference tab
+	$scope.reference = {
+		'pitch-types': {},
+		teams: {
+			ARI: 'Arizona Diamondbacks',
+			ATL: 'Atlanta Braves',
+			BAL: 'Baltimore Orioles',
+			BOS: 'Boston Red Sox',
+			CHC: 'Chicago Cubs',
+			CIN: 'Cincinnati Reds',
+			CLE: 'Cleveland Indians',
+			COL: 'Colorado Rockies',
+			CWS: 'Chicago White Sox',
+			DET: 'Detroit Tigers',
+			HOU: 'Houston Astros',
+			KC: 'Kansas City Royals',
+			LAA: 'Los Angeles Angels',
+			LAD: 'Los Angeles Dodgers',
+			MIA: 'Miami Marlins',
+			MIL: 'Milwaukee Brewers',
+			MIN: 'Minnesota Twins',
+			NYM: 'New York Mets',
+			NYY: 'New York Yankees',
+			OAK: 'Oakland Athletics',
+			PHI: 'Philadelphia Phillies',
+			PIT: 'Pittsburgh Pirates',
+			SD: 'San Diego Padres',
+			SEA: 'Seattle Mariners',
+			SF: 'San Francisco Giants',
+			STL: 'St. Louis Cardinals',
+			TB: 'Tampa Bay Rays',
+			TEX: 'Texas Rangers',
+			TOR: 'Toronto Blue Jays',
+			WSH: 'Washington Nationals',
+		}
+	}
+	console.log($scope.reference);
+
+	// fill the pitch types reference list
+	for (type in maps['previous-pitch']) {
+		$scope.reference['pitch-types'][type] =
+			options['previous-pitch'][maps['previous-pitch'][type]].text;
+	}
+
 	// formatting functions
 	$scope.format = {
 		// textualize data, with a hyphen corresponding to a space
@@ -683,23 +727,24 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 
 	// gets the textual message given the current status
 	$scope.getMessage = function() {
-		if (!$scope.input.submitted.team) {
-			return 'Welcome! Please select a tab above and enter a team below.';
+		if ($scope.view.curr === 'reference') {
+			return 'The following abbreviations are given for refernce';
+		} else if (!$scope.input.submitted.team) {
+			return 'Welcome! Please select a tab above and enter a team below';
 		} else if (!$scope.input.submitted.pitcher) {
-			return 'Now select the pitcher below.';
-		}
-		if ($scope.view.curr === 'splits') {
+			return 'Now select the pitcher below';
+		} else if ($scope.view.curr === 'splits') {
 			if ($scope.input.submitted.situation) {
 				return 'Look to the table to compare the full repetoire of ' +
-					$scope.input.submitted.pitcher.name + ' to the scenario you selected.';
+					$scope.input.submitted.pitcher.name + ' to the scenario you selected';
 			} else {
-				return 'Select the details of the situation and hit submit.';
+				return 'Select the details of the situation and hit submit';
 			}
 		} else if ($scope.view.curr === 'tree') {
 			if ($scope.tree.isDrawn) {
-				return 'See the graph below! Hit Update ';
+				return 'See the graph below! Hit Update to change the split selections';
 			} else {
-				return 'Select branches and their order, then hit draw.'
+				return 'Select branches and their order, then hit draw'
 			}
 		}
 	}
