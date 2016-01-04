@@ -4,39 +4,43 @@
  * Process the JSON data provided by TruMedia to produce the desired information
  */
 
-// ------------------------------------ UTILITY FUNCTIONS
-// get the index of a quantity of interest in the JSON data
-// by iteratively searching the headers array
-getIndexByLabel = function(label) {
-	for (var i = 0; i < data.header.length; i++) {
-		if (data.header[i].label === label) {
-			return i;
+// ------------------------------------ UTILITY
+// determine whether a pitch should be skipped
+isSkipPitch = function(pitch) {
+	for (var i = 0; i < SKIP_PITCHES; i++) {
+		if (SKIP_PITCHES[i] === pitch[I.PITCH_TYPE]) {
+			return true;
 		}
 	}
-	return SENTINEL;
+	return false;
 }
 
 // ------------------------------------ CONSTANTS
 // sentinel for data not found
-SENTINEL = -1;
+var SENTINEL = -1;
 
 // relevant indices in the array
-I = {
-	HOME        : getIndexByLabel('home'),
-	VISITOR     : getIndexByLabel('visitor'),
-	INNING      : getIndexByLabel('inning'),
-	SIDE        : getIndexByLabel('side'),
-	PITCHER     : getIndexByLabel('pitcher'),
-	PITCHER_HAND: getIndexByLabel('pitcherHand'),
-	PITCH_TYPE  : getIndexByLabel('pitchType'),
-	BATTER_HAND : getIndexByLabel('batterHand'),
-	BALLS       : getIndexByLabel('balls'),
-	STRIKES     : getIndexByLabel('strikes'),
-	OUTS        : getIndexByLabel('outs'),
-	FIRST_BASE  : getIndexByLabel('manOnFirst'),
-	SECOND_BASE : getIndexByLabel('manOnSecond'),
-	THIRD_BASE  : getIndexByLabel('Third'),
+var I = {
+	YEAR        : 0,
+	HOME        : 1,
+	VISITOR     : 2,
+	INNING      : 3,
+	SIDE        : 4,
+	PITCHER     : 5,
+	PITCHER_HAND: 6,
+	PITCH_TYPE  : 7,
+	BATTER_HAND : 8,
+	BALLS       : 9,
+	STRIKES     : 10,
+	OUTS        : 11,
+	FIRST_BASE  : 12,
+	SECOND_BASE : 13,
+	THIRD_BASE  : 14,
+	PA_RESULT   : 15,
 }
+
+// pitches to skip
+var SKIP_PITCHES = [ 'PO', 'IN', 'AB', 'AS', 'UN' ];
 
 // ------------------------------------ PROCESS
 // initialize empty objects for teams and pitchers
@@ -44,39 +48,45 @@ I = {
 var teams = {};
 var pitchers = {};
 
+var prevPitch = null;
 // for each pitch add the team to the teams array
-data.rows.forEach(function(row) {
-	// add new teams to the teams object
-	[ row[I.HOME], row[I.VISITOR] ].forEach(function(team) {
-		if (!teams.hasOwnProperty(team)) {
-			teams[team] = { pitchers: [] }
+data.forEach(function(pitch) {
+	if (!isSkipPitch(pitch)) {
+		// add new teams to the teams object
+		[ pitch[I.HOME], pitch[I.VISITOR] ].forEach(function(team) {
+			if (!teams.hasOwnProperty(team)) {
+				teams[team] = { pitchers: [] }
+			}
+		});
+
+		// add new pitchers to the object and append to team list
+		if (!pitchers.hasOwnProperty(pitch[I.PITCHER])) {
+			// add to the pitchers object
+			pitchers[pitch[I.PITCHER]] = {
+				hand   : pitch[I.PITCHER_HAND],
+				pitches: {}
+			}
+
+			// append to the team list
+			var pitcherTeam = pitch[I.SIDE] === 'T' ? pitch[I.HOME] : pitch[I.VISITOR];
+			teams[pitcherTeam].pitchers.push(pitch[I.PITCHER]);
 		}
-	});
 
-	// add new pitchers to the object and append to team list
-	if (!pitchers.hasOwnProperty(row[I.PITCHER])) {
-		// add to the pitchers object
-		pitchers[row[I.PITCHER]] = {
-			hand   : row[I.PITCHER_HAND],
-			pitches: {}
+		// if a new pitch, add a new key and initialize the array
+		if (!pitchers[pitch[I.PITCHER]].pitches.hasOwnProperty(pitch[I.PITCH_TYPE])) {
+			pitchers[pitch[I.PITCHER]].pitches[pitch[I.PITCH_TYPE]] = [];
 		}
 
-		// append to the team list
-		var pitcherTeam = row[I.SIDE] === 'T' ? row[I.HOME] : row[I.VISITOR];
-		teams[pitcherTeam].pitchers.push(row[I.PITCHER]);
-	}
+		// add to the pitches array
+		pitchers[pitch[I.PITCHER]].pitches[pitch[I.PITCH_TYPE]].push({
+			inning: pitch[I.INNING],
+			count : maps.count[pitch[I.BALLS]][pitch[I.STRIKES]],
+			bases: maps.bases[pitch[I.FIRST_BASE] * 1][pitch[I.SECOND_BASE] * 1][pitch[I.THIRD_BASE] * 1],
+			out: maps.out[pitch[I.OUTS]],
+			'batter-hand': maps['batter-hand'][pitch[I.BATTER_HAND]],
+			prevPitch: (prevPitch ? prevPitch[I.PITCH_TYPE] : null)
+		});
 
-	// if a new pitch, add a new key and initialize the array
-	if (!pitchers[row[I.PITCHER]].pitches.hasOwnProperty(row[I.PITCH_TYPE])) {
-		pitchers[row[I.PITCHER]].pitches[row[I.PITCH_TYPE]] = [];
+		prevPitch = pitch[I.PA_RESULT].length ? pitch : null;
 	}
-
-	// add to the pitches array
-	pitchers[row[I.PITCHER]].pitches[row[I.PITCH_TYPE]].push({
-		inning: row[I.INNING],
-		count : maps.count[row[I.BALLS]][row[I.STRIKES]],
-		bases: maps.bases[row[I.FIRST_BASE] * 1][row[I.SECOND_BASE] * 1][row[I.THIRD_BASE] * 1],
-		out: maps.out[row[I.OUTS]],
-		'batter-hand': maps['batter-hand'][row[I.BATTER_HAND]]
-	});
 });
