@@ -85,7 +85,7 @@ maps.out = {
 	0: 1,
 	1: 2,
 	2: 3
-}
+};
 
 // predicate for whether the outs for a pitch match the selected option
 isIncluded.out = function(option, pitch) {
@@ -111,7 +111,7 @@ options.bases = [
 maps.bases = {
 	0: { 0: { 0: 1, 1: 4 }, 1: { 0: 3, 1: 7 } },
 	1: { 0: { 0: 2, 1: 6 }, 1: { 0: 5, 1: 8 } }
-}
+};
 
 // predicate for whether the bases on a pitch match the selected option
 isIncluded.bases = function(option, pitch) {
@@ -130,10 +130,68 @@ options['batter-hand'] = [
 maps['batter-hand'] = {
 	R: 1,
 	L: 2
-}
+};
 
 // predicate method for whether the batter handedness either matches
 // or 'any' is selected
 isIncluded['batter-hand'] = function(option, pitch) {
 	return option === 0 || option === pitch['batter-hand'];
+}
+
+// ------------------------------------ Previous Pitch
+options['previous-pitch'] = [
+	{ text: 'Any Pitch', value: 0},
+	{ text: 'General Fastball', value: 1},
+	{ text: 'Breaking Ball', value: 2},
+	{ text: 'Changeup', value: 3},
+	{ text: 'Curveball', value: 4},
+	{ text: 'Two Seamer', value: 5},
+	{ text: 'Four Seamer', value: 6},
+	{ text: 'Cutter', value: 7},
+	{ text: 'Slider', value: 8},
+	{ text: 'Splitter', value: 9},
+	{ text: 'Sinker', value: 10},
+	{ text: 'Forkball', value: 11},
+	{ text: 'Knuckleball', value: 12},
+	{ text: 'Kuckle Curve', value: 13},
+	{ text: 'Screwball', value: 14},
+	{ text: 'Gyroball', value: 15},
+	{ text: 'Eephus', value: 16}
+];
+
+maps['previous-pitch'] = {
+	FA: 1,
+	CH: 3,
+	CU: 4,
+	FT: 5,
+	FF: 6,
+	FC: 7,
+	SL: 8,
+	FS: 9,
+	SI: 10,
+	FO: 11,
+	KN: 12,
+	KC: 13,
+	SC: 14,
+	GY: 15,
+	EP: 16
+};
+
+// predicate function for whether a pitch is of a certain type
+isIncluded['previous-pitch'] = function(option, pitch) {
+	// true for the any choice, fastball and pitch is a fastball,
+	// breaking and pitch is breaking, or exact match
+	return option === 0 ||
+		option === 1 && (pitch['previous-pitch'] === 1 ||
+			pitch['previous-pitch'] === 5 ||
+			pitch['previous-pitch'] === 6 ||
+			pitch['previous-pitch'] === 7 ||
+			pitch['previous-pitch'] === 9 ||
+			pitch['previous-pitch'] === 10) ||
+		option === 2 && (pitch['previous-pitch'] === 4 ||
+			pitch['previous-pitch'] === 8 ||
+			pitch['previous-pitch'] === 13 ||
+			pitch['previous-pitch'] === 14 ||
+			pitch['previous-pitch'] === 15) ||
+		option === pitch['previous-pitch'];
 }

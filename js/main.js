@@ -6,7 +6,7 @@
  */
 
 // the details with which pitchers can be separated
-var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand' ];
+var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand', 'previous-pitch' ];
 
 angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
 	// tabs and the current view, initialized to splits

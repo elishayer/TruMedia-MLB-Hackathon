@@ -7,7 +7,7 @@
 // ------------------------------------ UTILITY
 // determine whether a pitch should be skipped
 isSkipPitch = function(pitch) {
-	for (var i = 0; i < SKIP_PITCHES; i++) {
+	for (var i = 0; i < SKIP_PITCHES.length; i++) {
 		if (SKIP_PITCHES[i] === pitch[I.PITCH_TYPE]) {
 			return true;
 		}
@@ -48,7 +48,9 @@ var SKIP_PITCHES = [ 'PO', 'IN', 'AB', 'AS', 'UN' ];
 var teams = {};
 var pitchers = {};
 
-var prevPitch = null;
+// initialize to no previous pitch
+var prevPitchType = '';
+
 // for each pitch add the team to the teams array
 data.forEach(function(pitch) {
 	if (!isSkipPitch(pitch)) {
@@ -84,9 +86,10 @@ data.forEach(function(pitch) {
 			bases: maps.bases[pitch[I.FIRST_BASE] * 1][pitch[I.SECOND_BASE] * 1][pitch[I.THIRD_BASE] * 1],
 			out: maps.out[pitch[I.OUTS]],
 			'batter-hand': maps['batter-hand'][pitch[I.BATTER_HAND]],
-			prevPitch: (prevPitch ? prevPitch[I.PITCH_TYPE] : null)
+			'previous-pitch': maps['previous-pitch'][prevPitchType]
 		});
 
-		prevPitch = pitch[I.PA_RESULT].length ? pitch : null;
+		// update the previous pitch, but only if it is not the first of a PA
+		prevPitchType = (pitch[I.PA_RESULT].length === 0 ? pitch[I.PITCH_TYPE] : null);
 	}
 });
