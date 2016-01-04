@@ -8,10 +8,13 @@
 // the details with which pitchers can be separated
 var details = [ 'inning', 'count', 'bases', 'out', 'batter-hand', 'previous-pitch' ];
 
+// the years of data
+var years = [ '2013', '2014', '2015' ];
+
 angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function($scope, $uibModal) {
 	// tabs and the current view, initialized to splits
 	$scope.view = {
-		tabs: [ 'splits', 'tree' ],
+		tabs: [ 'splits', 'tree', 'reference' ],
 		curr: 'splits',
 		setActive: function(tab) {
 			this.curr = tab;
@@ -42,16 +45,14 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				type: 'team',
 				value: '0',
 				options: function() { return Object.keys(teams); },
-				submit: function() {
-					$scope.input.submitted.team = this.value;
-					$scope.message = 'Now please select a pitcher below.';
-				},
+				submit: function() { $scope.input.submitted.team = this.value; },
 				showForm: function() { return !$scope.input.submitted.team; },
 				result: function() { return 'Team: ' + $scope.input.submitted.team; },
 				showEdit: function() { return $scope.input.submitted.team; },
 				edit: function() {
-					// reset all data: team, pitcher, and distributions
+					// reset all data: team, year, pitcher, and distributions
 					$scope.input.selects.team.value = '0';
+					$scope.input.selects.year.value = '0';
 					$scope.input.selects.pitcher.value = '0';
 					$scope.input.submitted = {
 						team: 0,
@@ -59,7 +60,29 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 						situation: 0
 					};
 					$scope.input.situation.initialize();
-					$scope.tree.isDrawn = false;
+					$scope.tree.reset();
+				}
+			},
+			year: {
+				title: 'Year',
+				type: 'year',
+				value: '0',
+				options: function() { return years; },
+				submit: function() { $scope.input.submitted.year = this.value; },
+				showForm: function() {
+					return $scope.input.submitted.team &&
+						!$scope.input.submitted.year;
+				},
+				result: function() { return 'Year: ' + $scope.input.submitted.year; },
+				showEdit: function() { return $scope.input.submitted.year; },
+				edit: function() {
+					// reset all data except team: year, pitcher, and distributions
+					$scope.input.selects.year.value = '0';
+					$scope.input.selects.pitcher.value = '0';
+					$scope.input.submitted.pitcher = 0;
+					$scope.input.submitted.situation = 0;
+					$scope.input.situation.initialize();
+					$scope.tree.reset();
 				}
 			},
 			pitcher: {
@@ -68,8 +91,9 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				value: '0',
 				options: function() {
 					var team = $scope.input.submitted.team;
-					if (team) {
-						return teams[team].pitchers;
+					var year = $scope.input.submitted.year;
+					if (team && year) {
+						return teams[team][year].pitchers;
 					} else {
 						return [];
 					}
@@ -81,7 +105,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 
 					// find the overall pitch distribution
 					// store for brevity
-					var pitches = $scope.input.submitted.pitcher.pitches;
+					var pitches = $scope.input.submitted.pitcher
+						[$scope.input.submitted.year].pitches;
 
 					// initialize an empty distribution object
 					var distribution = {};
@@ -106,7 +131,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 					$scope.message = 'Great, now select details about the situation.';
 				},
 				showForm: function() {
-					return $scope.input.submitted.team &&
+					return $scope.input.submitted.year &&
 						!$scope.input.submitted.pitcher;
 				},
 				result: function() {
@@ -114,12 +139,12 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				},
 				showEdit: function() { return $scope.input.submitted.pitcher; },
 				edit: function() {
-					// reset all data except team: pitcher and distributions
+					// reset all data except team and year: pitcher and distributions
 					$scope.input.selects.pitcher.value = '0';
 					$scope.input.submitted.pitcher = 0;
 					$scope.input.submitted.situation = 0;
 					$scope.input.situation.initialize();
-					$scope.tree.isDrawn = false;
+					$scope.tree.reset();
 				}
 			}
 		},
@@ -136,7 +161,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				// initialize the submitted situation to be an empty object
 				// to hold the distribution for the situation and num pitches
 				$scope.input.submitted.situation = $scope.getSplitDistribution(
-					$scope.input.submitted.pitcher.pitches,
+					$scope.input.submitted.pitcher[$scope.input.submitted.year].pitches,
 					$scope.input.situation.values);
 			},
 			// initialize the value of each situation to '0'
@@ -166,7 +191,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			// initialize key in distribution object for the pitch type
 			distribution[type] = 0;
 
-			$scope.input.submitted.pitcher.pitches[type].forEach(function(pitch) {
+			$scope.input.submitted.pitcher[$scope.input.submitted.year]
+			.pitches[type].forEach(function(pitch) {
 				// included if the pitch is included for every situation detail
 				var included = true;
 				$scope.input.situation.details.forEach(function(detail) {
@@ -210,7 +236,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		getPitches: function() {
 			if ($scope.input.submitted.pitcher) {
 				// the keys of the pitches object sorted by number of pitches
-				var pitches = $scope.input.submitted.pitcher.pitches;
+				var pitches = $scope.input.submitted.pitcher
+					[$scope.input.submitted.year].pitches;
 				return Object.keys(pitches).sort(function(a, b) {
 					return pitches[b].length - pitches[a].length;
 				});
@@ -336,6 +363,11 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 				return a.detail === b;
 			}), 1);
 			$scope.tree.sort();
+		},
+		// full reset on the graphic
+		reset: function() {
+			d3.select('svg').remove();
+			$scope.tree.isDrawn = false;
 		},
 		// resort the details such that the selected are at the top and in order
 		// and otherwise maintain order
@@ -485,7 +517,8 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 
 						// get the distribution
 						var distribution = $scope.getSplitDistribution(
-							$scope.input.submitted.pitcher.pitches, details).distribution;
+							$scope.input.submitted.pitcher[$scope.input.submitted.year]
+							.pitches, details).distribution;
 
 						// sort by frequency in an array
 						var sortedDistribution = [];
@@ -629,18 +662,65 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 		selected: []
 	};
 
+	// the data for the reference tab
+	$scope.reference = {
+		'pitch-types': {},
+		teams: {
+			ARI: 'Arizona Diamondbacks',
+			ATL: 'Atlanta Braves',
+			BAL: 'Baltimore Orioles',
+			BOS: 'Boston Red Sox',
+			CHC: 'Chicago Cubs',
+			CIN: 'Cincinnati Reds',
+			CLE: 'Cleveland Indians',
+			COL: 'Colorado Rockies',
+			CWS: 'Chicago White Sox',
+			DET: 'Detroit Tigers',
+			HOU: 'Houston Astros',
+			KC: 'Kansas City Royals',
+			LAA: 'Los Angeles Angels',
+			LAD: 'Los Angeles Dodgers',
+			MIA: 'Miami Marlins',
+			MIL: 'Milwaukee Brewers',
+			MIN: 'Minnesota Twins',
+			NYM: 'New York Mets',
+			NYY: 'New York Yankees',
+			OAK: 'Oakland Athletics',
+			PHI: 'Philadelphia Phillies',
+			PIT: 'Pittsburgh Pirates',
+			SD: 'San Diego Padres',
+			SEA: 'Seattle Mariners',
+			SF: 'San Francisco Giants',
+			STL: 'St. Louis Cardinals',
+			TB: 'Tampa Bay Rays',
+			TEX: 'Texas Rangers',
+			TOR: 'Toronto Blue Jays',
+			WSH: 'Washington Nationals',
+		}
+	}
+
+	// fill the pitch types reference list
+	for (type in maps['previous-pitch']) {
+		$scope.reference['pitch-types'][type] =
+			options['previous-pitch'][maps['previous-pitch'][type]].text;
+	}
+
 	// formatting functions
 	$scope.format = {
 		// textualize data, with a hyphen corresponding to a space
 		textualize: function(text) {
-			// split at hyphens
-			text = text.split('-');
-			// capitalize each word
-			for (var i = 0; i < text.length; i++) {
-				text[i] = text[i][0].toUpperCase() + text[i].substring(1);
+			if (text) {
+				// split at hyphens
+				text = text.split('-');
+				// capitalize each word
+				for (var i = 0; i < text.length; i++) {
+					text[i] = text[i][0].toUpperCase() + text[i].substring(1);
+				}
+				// re-join with space instead of hyphen
+				return text.join(' ');
+			} else {
+				return '';
 			}
-			// re-join with space instead of hyphen
-			return text.join(' ');
 		},
 		// format num as a percent with number of digits as given, or 3 otherwise
 		// Assumes input as 0.52342165 for example, with 3 digits being 52.3%
@@ -683,23 +763,26 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 
 	// gets the textual message given the current status
 	$scope.getMessage = function() {
-		if (!$scope.input.submitted.team) {
-			return 'Welcome! Please select a tab above and enter a team below.';
+		if ($scope.view.curr === 'reference') {
+			return 'The following abbreviations are given for refernce';
+		} else if (!$scope.input.submitted.team) {
+			return 'Welcome! Please select a tab above and enter a team below';
+		} else if (!$scope.input.submitted.year) {
+			return 'Now select between the available years of data';
 		} else if (!$scope.input.submitted.pitcher) {
-			return 'Now select the pitcher below.';
-		}
-		if ($scope.view.curr === 'splits') {
+			return 'Now select the pitcher below';
+		} else if ($scope.view.curr === 'splits') {
 			if ($scope.input.submitted.situation) {
 				return 'Look to the table to compare the full repetoire of ' +
-					$scope.input.submitted.pitcher.name + ' to the scenario you selected.';
+					$scope.input.submitted.pitcher.name + ' to the scenario you selected';
 			} else {
-				return 'Select the details of the situation and hit submit.';
+				return 'Select the details of the situation and hit submit';
 			}
 		} else if ($scope.view.curr === 'tree') {
 			if ($scope.tree.isDrawn) {
-				return 'See the graph below! Hit Update ';
+				return 'See the graph below! Hit Update to change the split selections';
 			} else {
-				return 'Select branches and their order, then hit draw.'
+				return 'Select branches and their order, then hit draw'
 			}
 		}
 	}
@@ -739,6 +822,11 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 
 		$uibModal.open(options).result.then(cbSuccess, cbFailure);
 	};
+
+	// process the data
+	processData(data);
+	processData(data2014);
+	processData(data2015);
 });
 
 // the modal controller, which simply takes either a 'yes' or 'no' and sends the proper response

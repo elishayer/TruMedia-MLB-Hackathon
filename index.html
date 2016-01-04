@@ -19,8 +19,9 @@
 		<!-- Stylesheet -->
 		<link rel="stylesheet" href="./css/styles.css">
 	</head>
-	<body ng-app="tmhApp" ng-controller="tmhController" ng-cloak>
-		<div class="container">
+	<body ng-app="tmhApp" ng-controller="tmhController">
+		<h2 class="center" ng-show="false">The data is currently loading. It requires about 20 seconds.</h2>
+		<div class="container" ng-cloak>
 			<div class="row" id="intro">
 				<div class="col-xs-12">
 					<h1>The Next Pitch</h1>
@@ -28,6 +29,7 @@
 					<p>This website will give insights into what you can expect a pitcher to throw for their next pitch based on the current situation in the game. These are based on splits, such as dividing pitches by whether they occured with no outs, one out, or two outs. Some splits are composite splits, such as with count. Each possible count can be selected, but the count being in the pitcher's favor is a helpful composite split, for example.</p>
 					<p>The Splits tab lets you select a specific split and examine the difference between any pitcher's standard repetoire and their pitch selection tendencies in that split.</p>
 					<p>The Tree tab extends the splits tab to allow a custom built tree of splits, and displays the top three pitches selected in each of the several splits that comprise the tree.</p>
+					<p>The Reference tab provides a mapping between abbreviations used in this application and their fully written out meaning.</p>
 				</div>
 				<div class="col-xs-12" id="tabs">
 					<ul class="nav nav-tabs nav-justified">
@@ -40,7 +42,7 @@
 			<div class="message" ng-bind="getMessage()"></div>
 
 			<div class="row">
-				<div class="col-xs-3" id="selects">
+				<div class="col-xs-3" id="selects" ng-show="!view.isActive('reference')">
 					<h3>Initial Selections</h3>
 					<div ng-repeat="select in input.selects">
 						<form ng-submit="select.submit()" ng-show="select.showForm()">
@@ -126,6 +128,15 @@
 				</div>
 				<!-- END TREE TAB-->
 
+				<!-- REFERENCE TAB -->
+				<div class="col-xs-6" ng-show="view.isActive('reference')" ng-repeat="(header, list) in reference">
+					<h3 ng-bind="format.textualize(header)"></h3>
+					<ul>
+						<li ng-repeat="(abbr, text) in list" ng-bind="abbr + ': ' + text"></li>
+					</ul>
+				</div>
+				<!-- END REFERENCE TAB -->
+
 			</div><!-- .row -->
 		</div><!-- .container -->
 
@@ -134,8 +145,12 @@
 		<script src="./js/libraries/angular.min.js"></script>
 		<script src="./js/libraries/ui-bootstrap-tpls-0.14.3.min.js"></script>
 
-		<!-- scripts -->
+		<!-- data -->
+		<script src="./data/2013.js"></script>
+		<script src="./data/2014.js"></script>
 		<script src="./data/2015.js"></script>
+
+		<!-- scripts -->
 		<script src="./js/constants.js"></script>
 		<script src="./js/process.js"></script>
 		<script src="./js/main.js"></script>
