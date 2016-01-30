@@ -153,7 +153,7 @@ options['previous-pitch'] = [
 	{ text: 'Sinker', value: 10},
 	{ text: 'Forkball', value: 11},
 	{ text: 'Knuckleball', value: 12},
-	{ text: 'Kuckle Curve', value: 13},
+	{ text: 'Knuckle Curve', value: 13},
 	{ text: 'Screwball', value: 14},
 	{ text: 'Gyroball', value: 15},
 	{ text: 'Eephus', value: 16}

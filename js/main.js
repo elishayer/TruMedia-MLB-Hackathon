@@ -764,7 +764,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 	// gets the textual message given the current status
 	$scope.getMessage = function() {
 		if ($scope.view.curr === 'reference') {
-			return 'The following abbreviations are given for refernce';
+			return 'The following abbreviations are listed for reference';
 		} else if (!$scope.input.submitted.team) {
 			return 'Welcome! Please select a tab above and enter a team below';
 		} else if (!$scope.input.submitted.year) {
@@ -773,7 +773,7 @@ angular.module('tmhApp', ['ui.bootstrap']).controller('tmhController', function(
 			return 'Now select the pitcher below';
 		} else if ($scope.view.curr === 'splits') {
 			if ($scope.input.submitted.situation) {
-				return 'Look to the table to compare the full repetoire of ' +
+				return 'Look to the table to compare the full repertoire of ' +
 					$scope.input.submitted.pitcher.name + ' to the scenario you selected';
 			} else {
 				return 'Select the details of the situation and hit submit';
