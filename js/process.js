@@ -49,9 +49,6 @@ var I = {
 	PA_RESULT   : 15,
 }
 
-// the years of available data
-var YEARS = [ '2013', '2014', '2015' ];
-
 // pitches to skip
 var SKIP_PITCHES = [ 'PO', 'IN', 'AB', 'AS', 'UN' ];
 
@@ -62,7 +59,7 @@ var teams = {};
 var pitchers = {};
 
 // initialize to no previous pitch
-var prevPitch = null;
+var prevPitchType = '';
 
 processData = function(data) {
 	// for each pitch add the team to the teams array
@@ -72,7 +69,7 @@ processData = function(data) {
 			[ pitch[I.HOME], pitch[I.VISITOR] ].forEach(function(team) {
 				if (!teams.hasOwnProperty(team)) {
 					teams[team] = {};
-					YEARS.forEach(function(year) {
+					[ '2013', '2014', '2015' ].forEach(function(year) {
 						teams[team][year] = {
 							pitchers: []
 						}
@@ -84,10 +81,9 @@ processData = function(data) {
 			if (!pitchers.hasOwnProperty(pitch[I.PITCHER])) {
 				// add to the pitchers object
 				pitchers[pitch[I.PITCHER]] = {};
-				YEARS.forEach(function(year) {
+				[ '2013', '2014', '2015' ].forEach(function(year) {
 					pitchers[pitch[I.PITCHER]][year] = {
 						hand   : pitch[I.PITCHER_HAND],
-						pa
 						pitches: {}
 					}
 				});
@@ -111,11 +107,11 @@ processData = function(data) {
 				bases: maps.bases[pitch[I.FIRST_BASE] * 1][pitch[I.SECOND_BASE] * 1][pitch[I.THIRD_BASE] * 1],
 				out: maps.out[pitch[I.OUTS]],
 				'batter-hand': maps['batter-hand'][pitch[I.BATTER_HAND]],
-				'previous-pitch': maps['previous-pitch'][prevPitch[I.PITCH_TYPE]]
+				'previous-pitch': maps['previous-pitch'][prevPitchType]
 			});
 
 			// update the previous pitch, but only if it is not the first of a PA
-			prevPitch = (pitch[I.PA_RESULT].length === 0 ? pitch : null);
+			prevPitchType = (pitch[I.PA_RESULT].length === 0 ? pitch[I.PITCH_TYPE] : null);
 		}
 	});
 }
